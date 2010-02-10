@@ -48,7 +48,7 @@ module ActiveMerchant #:nodoc:
       # Authorize a credit card for a given amount.
       # 
       # ==== Parameters
-      # * <tt>money</tt> - The amount to be authorized.  Either an Integer value in cents or a Money object.
+      # * <tt>money</tt> - The amount to be authorized as an Integer value in cents.
       # * <tt>credit_card</tt> - The CreditCard details for the transaction.
       # * <tt>options</tt>
       #   * <tt>:billing_address</tt> - The billing address for the cardholder.      
@@ -64,7 +64,7 @@ module ActiveMerchant #:nodoc:
       # Capture authorized funds from a credit card.
       # 
       # ==== Parameters
-      # * <tt>money</tt> - The amount to be captured.  Either an Integer value in cents or a Money object.
+      # * <tt>money</tt> - The amount to be captured as an Integer value in cents.
       # * <tt>authorization</tt> - The approval code returned from the initial authorization.
       # * <tt>options</tt>
       #   * <tt>:credit_card</tt> - The CreditCard details from the initial transaction (required).
@@ -91,6 +91,34 @@ module ActiveMerchant #:nodoc:
       def add_verification_value(form, creditcard)
         form[:cvv2cvc2] = creditcard.verification_value 
         form[:cvv2cvc2_indicator] = '1'
+      end
+
+      def add_address(form,options)
+        billing_address = options[:billing_address] || options[:address] 
+        
+        if billing_address
+          form[:avs_address]    = billing_address[:address1].to_s.slice(0, 30)
+          form[:address2]       = billing_address[:address2].to_s.slice(0, 30)
+          form[:avs_zip]        = billing_address[:zip].to_s.slice(0, 10)
+          form[:city]           = billing_address[:city].to_s.slice(0, 30)
+          form[:state]          = billing_address[:state].to_s.slice(0, 10)
+          form[:company]        = billing_address[:company].to_s.slice(0, 50)
+          form[:phone]          = billing_address[:phone].to_s.slice(0, 20)
+          form[:country]        = billing_address[:country].to_s.slice(0, 50)
+        end
+                
+        if shipping_address = options[:shipping_address]
+          first_name, last_name = parse_first_and_last_name(shipping_address[:name])
+          form[:ship_to_first_name]     = first_name.to_s.slice(0, 20)
+          form[:ship_to_last_name]      = last_name.to_s.slice(0, 30)
+          form[:ship_to_address1]       = shipping_address[:address1].to_s.slice(0, 30)
+          form[:ship_to_address2]       = shipping_address[:address2].to_s.slice(0, 30)
+          form[:ship_to_city]           = shipping_address[:city].to_s.slice(0, 30)
+          form[:ship_to_state]          = shipping_address[:state].to_s.slice(0, 10)
+          form[:ship_to_company]        = shipping_address[:company].to_s.slice(0, 50)
+          form[:ship_to_country]        = shipping_address[:country].to_s.slice(0, 50)
+          form[:ship_to_zip]            = shipping_address[:zip].to_s.slice(0, 10)
+        end
       end
       
       def message_from(response)
