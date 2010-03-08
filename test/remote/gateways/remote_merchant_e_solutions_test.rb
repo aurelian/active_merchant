@@ -29,15 +29,13 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
   def test_verify_valid_card
     assert response= @gateway.verify(@credit_card, @options)
     assert_success response
-    assert_equal 'Card Ok', response.message
-    puts response.inspect
+    assert_equal 'This transaction has been approved', response.message
   end
 
   def test_verify_declined_card
     assert response= @gateway.verify(@declined_card, @options)
     assert_failure response
     assert_equal 'Card No. Error', response.message
-    puts response.inspect
   end
 
   def test_successful_purchase

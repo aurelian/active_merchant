@@ -123,7 +123,7 @@ module ActiveMerchant #:nodoc:
         response = parse( ssl_post(url, post_data(action,parameters)) )
         success_response_code= (action == "A")? "085" : "000"
 
-        Response.new(response["error_code"] == success_response_code, message_from(response), response,
+        Response.new(response["error_code"] == success_response_code, message_from(response, success_response_code), response,
           :authorization => response["transaction_id"],
           :test => test?,
           :cvv_result => response["cvv2_result"],
@@ -138,8 +138,8 @@ module ActiveMerchant #:nodoc:
         "#{month}#{year[-2..-1]}"
       end
 
-      def message_from(response)
-        if response["error_code"] == "000"
+      def message_from(response, success_response_code= "000")
+        if response["error_code"] == success_response_code
           "This transaction has been approved"
         else
           response["auth_response_text"]
