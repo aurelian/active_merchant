@@ -45,9 +45,13 @@ module ActiveMerchant #:nodoc:
         commit('S', money, post)
       end
 
+      # if you store a card to do recurring payments, add :moto_ecommerce_ind=2 to options
       def store(creditcard, options = {})
         post = {}
         add_creditcard(post, creditcard, options)
+        # The 'Card Store' does not store the cvv or the exp date, and is not needed.
+        post.delete(:cvv2)
+        post.delete(:card_exp_date)
         commit('T', nil, post)
       end
 
@@ -69,10 +73,13 @@ module ActiveMerchant #:nodoc:
         commit('V', nil, post)
       end
 
+      # verify *requires* avs data
       def verify(creditcard_or_card_id, options={})
         post= {}
+        add_address(post, options)
         add_payment_source(post, creditcard_or_card_id, options)
-        commit('A', nil, post)
+        # Must send a value of 0.00 for this transaction type.
+        commit('A', 0, post)
       end
 
       private
@@ -81,12 +88,16 @@ module ActiveMerchant #:nodoc:
         if address = options[:billing_address] || options[:address]
           post[:cardholder_street_address] = address[:address1].to_s.gsub(/[^\w.]/, '+')
           post[:cardholder_zip] = address[:zip].to_s
+        else
+          warn "[#{self.class.name}] Please add the :billing_address to qualify your transaction for preferred interchange!"
         end
       end
 
       def add_invoice(post, options)
         if options.has_key? :order_id
           post[:invoice_number] = options[:order_id].to_s.gsub(/[^\w.]/, '')
+        else
+          warn "[#{self.class.name}] Please add the :order_id to qualify your transaction for preferred interchange!"
         end
       end
 
@@ -104,6 +115,7 @@ module ActiveMerchant #:nodoc:
         post[:card_number]  = creditcard.number
         post[:cvv2] = creditcard.verification_value if creditcard.verification_value?
         post[:card_exp_date]  = expdate(creditcard)
+        post[:moto_ecommerce_ind] = options[:moto_ecommerce_ind] || 7
       end
 
       def parse(body)

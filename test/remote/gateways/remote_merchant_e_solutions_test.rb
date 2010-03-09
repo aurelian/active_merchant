@@ -13,17 +13,23 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
     @declined_card = credit_card('4111111111111112')
 
     @options = {
-    :billing_address => {
-      :name     => 'John Doe',
-      :address1 => '123 State Street',
-      :address2 => 'Apartment 1',
-      :city     => 'Nowhere',
-      :state    => 'MT',
-      :country  => 'US',
-      :zip      => '55555',
-      :phone    => '555-555-5555'
+      :billing_address => {
+        :name     => 'John Doe',
+        :address1 => '123 State Street',
+        :address2 => 'Apartment 1',
+        :city     => 'Nowhere',
+        :state    => 'MT',
+        :country  => 'US',
+        :zip      => '55555',
+        :phone    => '555-555-5555'
+      }
     }
-  }
+    @options_with_order_id= @options.merge({:order_id => Time.now.to_i})
+  end
+
+  def teardown
+    @options = nil
+    @options_with_order_id = nil
   end
 
   def test_verify_valid_card
@@ -38,21 +44,27 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
     assert_equal 'Card No. Error', response.message
   end
 
+  def test_simple_store_for_recurring
+    assert response = @gateway.store(@credit_card, @options.merge({:moto_ecommerce_ind => 2}))
+    assert_success response
+    assert_equal 'This transaction has been approved', response.message
+  end
+
   def test_successful_purchase
-    assert response = @gateway.purchase(@amount, @credit_card, @options)
+    assert response = @gateway.purchase(@amount, @credit_card, @options_with_order_id)
     assert_success response
     assert_equal 'This transaction has been approved', response.message
   end
 
   def test_unsuccessful_purchase
-    assert response = @gateway.purchase(@amount, @declined_card, @options)
+    assert response = @gateway.purchase(@amount, @declined_card, @options_with_order_id)
     assert_failure response
     assert_equal 'Card No. Error', response.message
   end
 
   def test_authorize_and_capture
     amount = @amount
-    assert auth = @gateway.authorize(amount, @credit_card, @options)
+    assert auth = @gateway.authorize(amount, @credit_card, @options_with_order_id)
     assert_success auth
     assert_equal 'This transaction has been approved', auth.message
     assert auth.authorization
@@ -72,19 +84,19 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
     assert store = @gateway.store(@credit_card)
     assert_success store
     assert_equal 'This transaction has been approved', store.message
-    assert purchase = @gateway.purchase(@amount, store.authorization, @options)
+    assert purchase = @gateway.purchase(@amount, store.authorization, @options_with_order_id)
     assert_success purchase
     assert_equal 'This transaction has been approved', purchase.message
     assert unstore = @gateway.unstore(store.authorization)
     assert_success unstore
     assert_equal 'This transaction has been approved', unstore.message
-    assert purchase_after_unstore = @gateway.purchase(@amount, store.authorization, @options)
+    assert purchase_after_unstore = @gateway.purchase(@amount, store.authorization, @options_with_order_id)
     assert_failure purchase_after_unstore
     assert_equal 'Invalid Card ID', purchase_after_unstore.message
   end
 
   def test_authorize_and_void
-    assert auth = @gateway.authorize(@amount, @credit_card, @options)
+    assert auth = @gateway.authorize(@amount, @credit_card, @options_with_order_id)
     assert_success auth
     assert_equal 'This transaction has been approved', auth.message
     assert auth.authorization
@@ -106,7 +118,7 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
   end
 
   def test_successful_avs_check
-    assert response = @gateway.purchase(@amount, @credit_card, @options)
+    assert response = @gateway.purchase(@amount, @credit_card, @options_with_order_id)
     assert_equal 'Y', response.avs_result['code']
     assert_equal 'Street address and 5-digit postal code match.', response.avs_result['message']
     assert_equal 'Y', response.avs_result['street_match']
@@ -115,17 +127,18 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
 
   def test_unsuccessful_avs_check_with_bad_street_address
     options = {
-    :billing_address => {
-      :name     => 'John Doe',
-      :address1 => '124 State Street',
-      :address2 => 'Apartment 1',
-      :city     => 'Nowhere',
-      :state    => 'MT',
-      :country  => 'US',
-      :zip      => '55555',
-      :phone    => '555-555-5555'
+      :billing_address => {
+        :name     => 'John Doe',
+        :address1 => '124 State Street',
+        :address2 => 'Apartment 1',
+        :city     => 'Nowhere',
+        :state    => 'MT',
+        :country  => 'US',
+        :zip      => '55555',
+        :phone    => '555-555-5555'
+      },
+      :order_id => Time.now.to_i
     }
-  }
     assert response = @gateway.purchase(@amount, @credit_card, options)
     assert_equal 'Z', response.avs_result['code']
     assert_equal 'Street address does not match, but 5-digit postal code matches.', response.avs_result['message']
@@ -135,17 +148,18 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
 
   def test_unsuccessful_avs_check_with_bad_zip
     options = {
-    :billing_address => {
-      :name     => 'John Doe',
-      :address1 => '123 State Street',
-      :address2 => 'Apartment 1',
-      :city     => 'Nowhere',
-      :state    => 'MT',
-      :country  => 'US',
-      :zip      => '55554',
-      :phone    => '555-555-5555'
+      :billing_address => {
+        :name     => 'John Doe',
+        :address1 => '123 State Street',
+        :address2 => 'Apartment 1',
+        :city     => 'Nowhere',
+        :state    => 'MT',
+        :country  => 'US',
+        :zip      => '55554',
+        :phone    => '555-555-5555'
+       },
+       :order_id => Time.now.to_i
     }
-  }
     assert response = @gateway.purchase(@amount, @credit_card, options)
     assert_equal 'A', response.avs_result['code']
     assert_equal 'Street address matches, but 5-digit and 9-digit postal code do not match.', response.avs_result['message']
@@ -154,7 +168,7 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
   end
 
   def test_successful_cvv_check
-    assert response = @gateway.purchase(@amount, @credit_card, @options)
+    assert response = @gateway.purchase(@amount, @credit_card, @options_with_order_id)
     assert_equal 'M', response.cvv_result['code']
     assert_equal 'Match', response.cvv_result['message']
   end
@@ -168,7 +182,7 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
                     :year       => (Time.now.year + 1).to_s,
                     :verification_value => '555'
                   })
-    assert response = @gateway.purchase(@amount, credit_card, @options)
+    assert response = @gateway.purchase(@amount, credit_card, @options_with_order_id)
     assert_equal 'N', response.cvv_result['code']
     assert_equal 'No Match', response.cvv_result['message']
   end
@@ -178,7 +192,7 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
               :login => '',
               :password => ''
             )
-    assert response = gateway.purchase(@amount, @credit_card, @options)
+    assert response = gateway.purchase(@amount, @credit_card, @options_with_order_id)
     assert_failure response
     assert_equal 'Invalid ID or Key', response.message
   end
