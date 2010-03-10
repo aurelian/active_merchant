@@ -84,13 +84,13 @@ class RemoteMerchantESolutionTest < Test::Unit::TestCase
     assert store = @gateway.store(@credit_card)
     assert_success store
     assert_equal 'This transaction has been approved', store.message
-    assert purchase = @gateway.purchase(@amount, store.authorization, @options_with_order_id)
+    assert purchase = @gateway.purchase(@amount, store.authorization, @options_with_order_id.merge({:card_exp_date =>"0518"}))
     assert_success purchase
     assert_equal 'This transaction has been approved', purchase.message
     assert unstore = @gateway.unstore(store.authorization)
     assert_success unstore
     assert_equal 'This transaction has been approved', unstore.message
-    assert purchase_after_unstore = @gateway.purchase(@amount, store.authorization, @options_with_order_id)
+    assert purchase_after_unstore = @gateway.purchase(@amount, store.authorization, @options_with_order_id.merge({:card_exp_date=>"0518"}))
     assert_failure purchase_after_unstore
     assert_equal 'Invalid Card ID', purchase_after_unstore.message
   end

@@ -36,6 +36,7 @@ module ActiveMerchant #:nodoc:
         add_invoice(post, options)
         add_payment_source(post, creditcard_or_card_id, options)
         add_address(post, options)
+        post[:moto_ecommerce_ind] = options[:moto_ecommerce_ind] || 7
         commit('D', money, post)
       end
 
@@ -45,13 +46,11 @@ module ActiveMerchant #:nodoc:
         commit('S', money, post)
       end
 
-      # if you store a card to do recurring payments, add :moto_ecommerce_ind=2 to options
+      # card store will store only the CC number
+      # you'll need to pass card_exp_date and cvv2 (if needed)
       def store(creditcard, options = {})
         post = {}
         add_creditcard(post, creditcard, options)
-        # The 'Card Store' does not store the cvv or the exp date, and is not needed.
-        post.delete(:cvv2)
-        post.delete(:card_exp_date)
         commit('T', nil, post)
       end
 
@@ -105,17 +104,19 @@ module ActiveMerchant #:nodoc:
         if creditcard_or_card_id.is_a?(String)
           # using stored card
           post[:card_id] = creditcard_or_card_id
+          raise ArgumentError.new("[#{self.class.name}] Please provide :card_exp_date=MMYY for a stored card") unless options[:card_exp_date]
+          post[:card_exp_date] = options[:card_exp_date]
+          post[:cvv2] = options[:cvv2] if options[:cvv2]
         else
           # card info is provided
           add_creditcard(post, creditcard_or_card_id, options)
+          post[:card_exp_date] = expdate(creditcard_or_card_id)
+          post[:cvv2] = creditcard_or_card_id.verification_value if creditcard_or_card_id.verification_value?
         end
       end
 
       def add_creditcard(post, creditcard, options)
         post[:card_number]  = creditcard.number
-        post[:cvv2] = creditcard.verification_value if creditcard.verification_value?
-        post[:card_exp_date]  = expdate(creditcard)
-        post[:moto_ecommerce_ind] = options[:moto_ecommerce_ind] || 7
       end
 
       def parse(body)
