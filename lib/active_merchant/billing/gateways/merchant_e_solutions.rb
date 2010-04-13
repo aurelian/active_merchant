@@ -23,6 +23,10 @@ module ActiveMerchant #:nodoc:
         super
       end
 
+      def test?
+        ((@options[:test] || @options["test"]) == true) || super
+      end
+
       def authorize(money, creditcard_or_card_id, options = {})
         post = {}
         add_invoice(post, options)
