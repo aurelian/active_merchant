@@ -109,6 +109,10 @@ Instapay Gateway (May 3, 2009)
 
 * Thomas Rideout
 
+Iridium Gateway (June 13, 2009)
+
+* Phil Smy
+
 MerchantWARE (July 7, 2009)
 
 * Cody Fauser
@@ -132,3 +136,40 @@ JetPay (September 29, 2009)
 SallieMae (October 2, 2009)
 
 * iamjwc
+
+Netaxept (February 08, 2010)
+
+* Nathaniel Talbott
+
+Garanti (May 05, 2010)
+
+* Selem Delul (moon@mac.home)
+
+Braintree Blue Gateway (May 19th, 2010)
+
+* Braintree (code@getbraintree.com)
+
+Inspire Gateway (September 27, 2010)
+
+* ryan r. smith
+
+SecureNet Gateway (September 27, 2010)
+
+* Kal
+
+PayboxDirect Gateway (September 27, 2010)
+
+* Donald Piret <donald@donaldpiret.com>
+
+SagePay Form Offsite Gateway (October 14, 2010)
+
+* Adrian Irving-Beer
+
+DirecPay Gateway (October 14, 2010)
+
+* Soleone
+
+ePay Gateway (November 23, 2010)
+
+* Original code by ePay (epay.dk)
+* Refactored by Jonathan Rudenberg

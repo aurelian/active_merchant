@@ -121,6 +121,12 @@ class PaypalExpressTest < Test::Unit::TestCase
     assert_equal '1.00', REXML::XPath.first(xml, '//n2:OrderTotal').text
   end
   
+  def test_amount_format_for_jpy_currency
+    @gateway.expects(:ssl_post).with(anything, regexp_matches(/n2:OrderTotal currencyID=.JPY.>1<\/n2:OrderTotal>/)).returns(successful_authorization_response)
+    response = @gateway.authorize(100, :token => 'EC-6WS104951Y388951L', :payer_id => 'FWRVKNRRZ3WUC', :currency => 'JPY')
+    assert response.success?
+  end
+  
   def test_handle_locale_code
     xml = REXML::Document.new(@gateway.send(:build_setup_request, 'SetExpressCheckout', 0, { :locale => 'GB' }))
     
@@ -165,6 +171,13 @@ class PaypalExpressTest < Test::Unit::TestCase
                )
                
     assert_equal ["10736", "10002"] , response.params['error_codes'].split(',')
+  end
+  
+  def test_allow_guest_checkout
+    xml = REXML::Document.new(@gateway.send(:build_setup_request, 'SetExpressCheckout', 10, {:allow_guest_checkout => true}))
+    
+    assert_equal 'Sole', REXML::XPath.first(xml, '//n2:SolutionType').text
+    assert_equal 'Billing', REXML::XPath.first(xml, '//n2:LandingPage').text
   end
 
   private
