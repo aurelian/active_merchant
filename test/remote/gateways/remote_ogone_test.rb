@@ -5,7 +5,7 @@ class RemoteOgoneTest < Test::Unit::TestCase
   def setup
     @gateway = OgoneGateway.new(fixtures(:ogone))
     @amount = 100
-    @credit_card =   credit_card('4000100011112224')
+    @credit_card =   credit_card('4111111111111111')
     @declined_card = credit_card('1111111111111111')
     @options = {
       :order_id => generate_unique_id[0...30],
@@ -14,12 +14,22 @@ class RemoteOgoneTest < Test::Unit::TestCase
     }
   end
 
+  def test_store
+    _alias= "test-#{Time.now.to_i}"
+
+    assert @gateway.store(@credit_card,  @options.merge(:store => _alias))
+
+    assert response = @gateway.purchase(@amount, _alias, @options.merge(:order_id=>Time.now.to_i.to_s+"3"))
+    assert_success response
+    assert_equal OgoneGateway::SUCCESS_MESSAGE, response.message
+  end
+
   def test_successful_purchase
     assert response = @gateway.purchase(@amount, @credit_card, @options)
     assert_success response
     assert_equal OgoneGateway::SUCCESS_MESSAGE, response.message
   end
-  
+
   def test_successful_with_non_numeric_order_id
     @options[:order_id] = "##{@options[:order_id][0...26]}.12"
     assert response = @gateway.purchase(@amount, @credit_card, @options)
