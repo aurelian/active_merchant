@@ -16,12 +16,35 @@ class RemoteOgoneTest < Test::Unit::TestCase
 
   def test_store
     _alias= "test-#{Time.now.to_i}"
-
-    assert @gateway.store(@credit_card,  @options.merge(:store => _alias))
-
+    assert response = @gateway.store(@credit_card,  @options.merge(:store => _alias))
+    assert_equal _alias, response.authorization
     assert response = @gateway.purchase(@amount, _alias, @options.merge(:order_id=>Time.now.to_i.to_s+"3"))
     assert_success response
     assert_equal OgoneGateway::SUCCESS_MESSAGE, response.message
+  end
+
+  def test_unsuccessful_store
+    error = assert_raise ArgumentError do
+      @gateway.store(@credit_card, {:store => ''})
+    end
+    assert_equal "Missing required parameter: store", error.message
+  end
+
+  def test_unsuccessful_store_with_declined_card
+    assert response = @gateway.store(@declined_card, @options.merge(:store => Time.now.to_i.to_s))
+    assert_failure response
+  end
+
+  def test_verify
+    assert response = @gateway.verify(@credit_card)
+    assert_success response
+    assert_equal OgoneGateway::SUCCESS_MESSAGE, response.message
+  end
+
+  def test_unsuccessful_verify
+    assert response = @gateway.verify(@declined_card)
+    assert_failure response
+    assert_equal 'No brand', response.message
   end
 
   def test_successful_purchase
@@ -121,5 +144,4 @@ class RemoteOgoneTest < Test::Unit::TestCase
     assert_failure response
     assert_equal 'No pspid', response.message
   end
-
 end

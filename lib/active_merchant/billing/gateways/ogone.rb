@@ -95,9 +95,30 @@ module ActiveMerchant #:nodoc:
         commit('RES', post)
       end
 
-      # Pseudo method to store a CC using Ogone Alias feature
+      # Pseudo-Method to store a CC using Ogone Alias feature
+      #
+      #   :store parameter is required
+      #
+      # Workflow:
+      #   * authorize transfer of 0.01 currency
+      #   * void the authorisation
       def store(payment_source, options = {})
+        requires!(options.delete_if{|k,v| v.empty?}, :store)
         auth= authorize(1, payment_source, options)
+        return auth unless auth.success?
+        response= void(auth.authorization)
+        return response unless response.success?
+        Response.new(true, SUCCESS_MESSAGE, {}, :test => test?, :authorization => options[:store])
+      end
+
+      # Pseudo-Method to verify a CC with Ogone
+      #
+      # Workflow:
+      #   * authorize transfer of 0.01 currency
+      #   * void the authorisation
+      def verify(payment_source, options = {})
+        auth= authorize(1, payment_source, options)
+        return auth unless auth.success?
         void(auth.authorization)
       end
 
@@ -235,10 +256,6 @@ module ActiveMerchant #:nodoc:
         add_pair parameters, 'USERID',     @options[:user]
         add_pair parameters, 'PSWD',       @options[:password]
         url = URLS[test? ? :test : :production][parameters['PAYID'] ? :maintenance : :order ]
-
-        # puts "\n~> url: #{url}. action: #{action}.\nparams: #{parameters.inspect}\n"
-        # puts "\n~> data:\n#{post_data(action, parameters)}\n"
-
         response = parse(ssl_post(url, post_data(action, parameters)))
         options = { :authorization => [response["PAYID"], action].join(";"),
                     :test => test?,
