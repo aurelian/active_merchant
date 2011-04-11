@@ -6,25 +6,25 @@ module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class PayflowGateway < Gateway
       include PayflowCommonAPI
-      
+
+      SUCCESS_MESSAGE = "The store was successful"
       RECURRING_ACTIONS = Set.new([:add, :modify, :cancel, :inquiry, :reactivate, :payment])
-       
+
       self.supported_cardtypes = [:visa, :master, :american_express, :jcb, :discover, :diners_club]
       self.homepage_url = 'https://www.paypal.com/cgi-bin/webscr?cmd=_payflow-pro-overview-outside'
       self.display_name = 'PayPal Payflow Pro'
-    
+
       def authorize(money, credit_card_or_reference, options = {})
         request = build_sale_or_authorization_request(:authorization, money, credit_card_or_reference, options)
-      
-        commit(request)
-      end
-      
-      def purchase(money, credit_card_or_reference, options = {})
-        request = build_sale_or_authorization_request(:purchase, money, credit_card_or_reference, options)
 
         commit(request)
       end
-      
+
+      def purchase(money, credit_card_or_reference, options = {})
+        request = build_sale_or_authorization_request(:purchase, money, credit_card_or_reference, options)
+        commit(request)
+      end
+
       def credit(money, identification_or_credit_card, options = {})
         if identification_or_credit_card.is_a?(String)
           # Perform referenced credit
@@ -33,13 +33,34 @@ module ActiveMerchant #:nodoc:
           # Perform non-referenced credit
           request = build_credit_card_request(:credit, money, identification_or_credit_card, options)
         end
-        
+
         commit(request)
       end
-      
+
+
+      # Pseudo-Method to store a CC using transaction referencing
+      #
+      # Workflow:
+      #   * authorize transfer of 0.01 currency
+      #   * save the reference number (pn_ref)
+      #   * void the authorisation
+      #
+      def store(credit_card, options = {})
+        stored = purchase( 1, credit_card)
+        return stored unless stored.success?
+
+        # we may charge some money we should not but I guess there is
+        # no better way for now
+        voided = void(stored.authorization)
+        return voided unless voided.success?
+
+        return stored
+      end
+
+
       # Adds or modifies a recurring Payflow profile.  See the Payflow Pro Recurring Billing Guide for more details:
       # https://www.paypal.com/en_US/pdf/PayflowPro_RecurringBilling_Guide.pdf
-      #    
+      #
       # Several options are available to customize the recurring profile:
       #
       # * <tt>profile_id</tt> - is only required for editing a recurring profile
