@@ -46,13 +46,14 @@ module ActiveMerchant #:nodoc:
       #   * void the authorisation
       #
       def store(credit_card, options = {})
-        stored = purchase( 1, credit_card)
+        stored = authorize( 1, credit_card)
         return stored unless stored.success?
 
-        unless void(stored.authorization).success?
-          credited = credit( 1, stored.token)
-          return credited unless credited.success?
-        end
+        voided = void(stored.authorization)
+        return voided unless  voided.success?
+        #   credited = credit( 1, stored.token)
+        #   return credited unless credited.success?
+        # end
 
         return stored
       end
