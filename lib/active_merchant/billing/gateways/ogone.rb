@@ -153,11 +153,17 @@ module ActiveMerchant #:nodoc:
       # Credit the specified account by a specific amount.
       def credit(money, identification_or_credit_card, options = {})
         if reference_transaction?(identification_or_credit_card)
+          # deprecated CREDIT_DEPRECATION_MESSAGE
           # Referenced credit: refund of a settled transaction
-          perform_reference_credit(money, identification_or_credit_card, options)
+          refund(money, identification_or_credit_card, options)
         else # must be a credit card or card reference
           perform_non_referenced_credit(money, identification_or_credit_card, options)
         end
+      end
+
+      # Refund of a settled transaction
+      def refund(money, reference, options = {})
+        perform_reference_credit(money, reference, options)
       end
 
       def test?
@@ -248,7 +254,7 @@ module ActiveMerchant #:nodoc:
 
       def parse(body)
         xml = REXML::Document.new(body)
-        xml.root.attributes
+        convert_attributes_to_hash(xml.root.attributes)
       end
 
       def commit(action, parameters)
@@ -289,10 +295,11 @@ module ActiveMerchant #:nodoc:
       end
 
       def post_data(action, parameters = {})
-        add_pair parameters, 'Operation' , action
-        if @options[:signature] # the user wants a SHA-1 signature
-          string = ['orderID','amount','currency','CARDNO','PSPID','Operation','ALIAS'].map{|s|parameters[s]}.join + @options[:signature]
-          add_pair parameters, 'SHASign' , Digest::SHA1.hexdigest(string)
+        add_pair parameters, 'Operation', action
+        if @options[:signature] && !@options[:signature].empty? # the user wants a SHA-1 signature
+          string= parameters.keys.sort{|a,b| a.upcase<=>b.upcase}.map{|key| "#{key.upcase}=#{parameters[key]}"}.join(@options[:signature])+@options[:signature]
+          digest= Digest::SHA1.hexdigest(string).upcase
+          add_pair parameters, 'SHASign', digest
         end
         parameters.collect { |key, value| "#{key}=#{CGI.escape(value.to_s)}" }.join("&")
       end
@@ -301,6 +308,13 @@ module ActiveMerchant #:nodoc:
         post[key] = value if !value.blank? || options[:required]
       end
 
+      def convert_attributes_to_hash(rexml_attributes)
+        response_hash = {}
+        rexml_attributes.each do |key, value|
+          response_hash[key] = value
+        end
+        response_hash
+      end
     end
   end
 end
